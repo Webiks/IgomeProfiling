@@ -23,7 +23,7 @@ def repeat_items(list):
 def build_classifier(first_phase_output_path, motif_inference_output_path,
                      classification_output_path, logs_dir, samplename2biologicalcondition_path,
                      fitting_done_path, number_of_random_pssms, rank_method, tfidf_method, tfidf_factor,
-                     shuffles, queue_name, verbose, error_path, argv):
+                     shuffles, use_new_rf, num_of_hyperparam_configurations_to_sample, queue_name, verbose, error_path, argv):
     is_pval = rank_method == 'pval'
     os.makedirs(classification_output_path, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -123,6 +123,8 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
             else:
                 aggregated_values_path = os.path.join(classification_output_path, bc, f'{bc}_values.csv')
                 aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
+                if use_new_rf:
+                    cmds.append('--new_rf') #only set here becuase if is_pval then merge_pvalues.py will not get called
                 all_cmds_params.append([meme_path, scanning_dir_path, bc, aggregated_values_path,
                                         aggregated_hits_path, samplename2biologicalcondition_path, done_path])
         else:
@@ -156,11 +158,15 @@ def build_classifier(first_phase_output_path, motif_inference_output_path,
         aggregated_hits_path = os.path.join(classification_output_path, bc, f'{bc}_hits.csv')
         hits_done_path = os.path.join(logs_dir, f'{bc}_hits_done_fitting.txt')
         
-        value_cmd = [aggregated_values_path, pvalues_done_path]
-        hits_cmd = [aggregated_hits_path, hits_done_path]
+        value_cmd = [aggregated_values_path, pvalues_done_path, num_of_hyperparam_configurations_to_sample]
+        hits_cmd = [aggregated_hits_path, hits_done_path, num_of_hyperparam_configurations_to_sample]
         if rank_method == 'tfidf' or rank_method == 'shuffles':
             value_cmd.append('--tfidf')
             hits_cmd.append('--tfidf')
+
+        if use_new_rf:
+            value_cmd.append('--new_rf')
+            hits_cmd.append('--new_rf')
 
         if not os.path.exists(pvalues_done_path):
             all_cmds_params.append(value_cmd)
@@ -215,12 +221,14 @@ if __name__ == '__main__':
     parser.add_argument('logs_dir', type=str, help='logs folder')
     parser.add_argument('samplename2biologicalcondition_path', type=str, help='A path to the sample name to biological condition file')
     parser.add_argument('number_of_random_pssms', default=100, type=int, help='Number of pssm permutations')
+    parser.add_argument('num_of_hyperparam_configurations_to_sample', default=1000, type=int, help='How many random configurations of hyperparameters should be sampled?')
     parser.add_argument('done_file_path', help='A path to a file that signals that the module finished running successfully.')
 
     parser.add_argument('--rank_method', choices=['pval', 'tfidf', 'shuffles'], default='pval', help='Motifs ranking method')
     parser.add_argument('--tfidf_method', choices=['boolean', 'terms', 'log', 'augmented'], default='boolean', help='TF-IDF method')
     parser.add_argument('--tfidf_factor', type=float, default=0.5, help='TF-IDF augmented method factor (0-1)')
     parser.add_argument('--shuffles', default=5, type=int, help='Number of controlled shuffles permutations')
+    parser.add_argument('--new_rf', action='store_true', help='run new random forest version')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='a queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
@@ -238,4 +246,4 @@ if __name__ == '__main__':
     build_classifier(args.parsed_fastq_results, args.motif_inference_results, args.classification_output_path,
                      args.logs_dir, args.samplename2biologicalcondition_path, args.done_file_path,
                      args.number_of_random_pssms, args.rank_method, args.tfidf_method, args.tfidf_factor, 
-                     args.shuffles, args.queue, True if args.verbose else False, error_path, sys.argv)
+                     args.shuffles, args.new_rf, args.num_of_hyperparam_configurations_to_sample, args.queue, True if args.verbose else False, error_path, sys.argv)

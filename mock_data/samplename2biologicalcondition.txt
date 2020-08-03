@@ -1,16 +1,4 @@
 17b_01	17b
 17b_02	17b
-17b_03	17b
-17b_04	17b
 b12_01	b12
 b12_02	b12
-b12_03	b12
-b12_04	b12
-Herceptin_01	Herceptin
-Herceptin_02	Herceptin
-Herceptin_03	Herceptin
-Herceptin_04	Herceptin
-21c_01	21c
-21c_02	21c
-21c_03	21c
-21c_04	21c
