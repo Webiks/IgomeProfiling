@@ -9,31 +9,33 @@ def cross_motif_results(merge_cluster_path,results_dir_path,done_file_path):
     result={}
     #for every EC_HIV open the file distinctive_motifs_top_10.csv
     for dirname in os.listdir(results_dir_path):
-        ### if only between 10 motifs
-        #result={}
+        merge_cluster=open(merge_cluster_path,'r')
         df=pd.read_csv(f'{results_dir_path}/{dirname}/{dirname}_values_distinctive_motifs/distinctive_motifs_top_10.csv')
         motifs_name=df['motif']
         # find witch motif in this file are connected for the same cluster.
-        for num,line in enumerate(merge_cluster):
+        num=1
+        for line in merge_cluster:
             line_var=line.split(',')
             for var in line_var:
                 motif=var.split('_')[0]
                 for name in motifs_name:
                     if name==motif:
                         new_name_motif=motif +' '+dirname
-                        if num in result.keys() and new_name_motif not in result[num]:
-                            result[num].append(new_name_motif)
+                        if num in result.keys():
+                            if new_name_motif in result[num]:
+                                continue
+                            else:    
+                                result[num].append(new_name_motif)
                         else:
                             result[num]=[new_name_motif]
-        merge_cluster.seek(0, 0)
-    #f_out.write(f'Name folder: {dirname')
-    #print result to the file
+            num+=1
+        merge_cluster.close()
+    
     print(result)
     for key in result.keys():
         if len(result[key])>1:
             f_out.write(f'number line: {key} motifs: {result[key]}\n')
     f_out.close()
-    merge_cluster.close()
 
 
 
@@ -52,3 +54,4 @@ if __name__ == '__main__':
 
     cross_motif_results(args.merge_cluster_path, args.results_dir_path,args.done_file_path)
 
+    #python3 model_fitting/cross_motif.py output/analysis/merged_clusters.csv output/analysis/model_fitting output/analysis/result_file.txt
