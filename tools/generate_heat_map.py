@@ -1,26 +1,33 @@
 '''
-Extract ranked distinctive motifs ignoring artifacts
+Generate a heatmap 
 '''
 from os import path
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 
-def generate_heatmap(base_path: str, df: pd.DataFrame, colors, title: str):
+def generate_heatmap(base_path: str, df: pd.DataFrame, title: str, colors=False):
     print('Generating heatmap...')
 
     df.set_index('sample_name', inplace=True)
+    is_hits=True if base_path.contaion('hits') else False
+    df=np.log2(df+1) if is_hits else df 
+    
     map_path = f'{base_path}.svg'
     number_of_samples = df.shape[0]
+    number_of_motifs = df.shape[1]
 
+    
     map = sns.clustermap(df, cmap="Blues", col_cluster=False, yticklabels=True, col_colors=colors)
     plt.setp(map.ax_heatmap.yaxis.get_majorticklabels(), fontsize=150 / number_of_samples)
+    plt.setp(map.ax_heatmap.xaxis.get_majorticklabels(), fontsize=150 / number_of_motifs)
     map.ax_heatmap.set_title(title, pad=25, fontsize=14)
     map.savefig(map_path, format='svg', bbox_inches="tight")
     plt.close()
 
-
+'''
 def process(values_path: str, motifs, colors, heatmap_title: str, output_base_path: str):
     values = pd.read_csv(values_path)
     columns = ['sample_name'] + motifs
@@ -40,3 +47,4 @@ if __name__ == '__main__':
     colors = ['green', 'green', 'orange', 'orange', 'orange', 'orange', 'orange', 'orange', 'orange']
     process(values_path, motifs, colors, heatmap_title, output_base_path)
 
+'''
