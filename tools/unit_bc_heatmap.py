@@ -6,10 +6,18 @@ from sklearn import preprocessing
 import sys
 import os
 
-from  tools.generate_heat_map import *
+if os.path.exists('/groups/pupko/orenavr2/'):
+    src_dir = '/groups/pupko/orenavr2/igomeProfilingPipeline/src'
+elif os.path.exists('/Users/Oren/Dropbox/Projects/'):
+    src_dir = '/Users/Oren/Dropbox/Projects/gershoni/src'
+else:
+    src_dir = '.'
+sys.path.insert(0, src_dir)
+
+from tools.generate_heat_map import *
 from auxiliaries.pipeline_auxiliaries import *
 
-def unit_bc_data(sample2bc_path,path_output,path_model_fitting,selected_motifs,verbose):    
+def unit_bc_data(sample2bc_path,path_output,path_model_fitting,is_hits,selected_motifs,verbose):    
     dic_motif={}
     if selected_motifs:
         file_motif=pd.read_csv(selected_motifs)
@@ -24,7 +32,7 @@ def unit_bc_data(sample2bc_path,path_output,path_model_fitting,selected_motifs,v
     df=pd.DataFrame({'sample_name':sample_name})
     for name_bc in bc:
         path_file=''
-        if isHits:
+        if is_hits:
             path_file=path_model_fitting+'/'+name_bc+'/'+name_bc+'_hits_model/perfect_feature_names.csv'
         else:
             path_file=path_model_fitting+'/'+name_bc+'/'+name_bc+'_values_model/perfect_feature_names.csv'
@@ -34,7 +42,8 @@ def unit_bc_data(sample2bc_path,path_output,path_model_fitting,selected_motifs,v
                 #the dictionary is empty, take all the motifs
                 df=pd.merge(df,table)
             else:
-                table_new= table[x for x in dic_motif[name_bc] if str(x) != 'nan']
+                list_motifs=[x for x in dic_motif[name_bc] if str(x) != 'nan']
+                table_new= table[list_motifs]
                 df=pd.merge(df,table_new)
     title_map='Heatmap unit of all the biological condition'
     generate_heatmap(path_output,df,title_map)  
@@ -48,6 +57,7 @@ if __name__ == '__main__':
     parser.add_argument('samplename2bc', type=str, help='A file of samplename2biologicalcondition.txt')
     parser.add_argument('output_heatmap', type=str, help='A output folder to put the heatmap result')
     parser.add_argument('model_fitting_results', type=str, help='folder of result of random forest run')
+    parser.add_argument('isHit', type=bool, help='If to connect all the hits data or values data')
     parser.add_argument('--file_of_select_motif', type=str, help='csv file with specific selected motif to connect together')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
     args = parser.parse_args()
@@ -58,4 +68,4 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('main')
     
-    unit_bc_data(args.samplename2bc,args.output_heatmap,args.model_fitting_results,args.file_of_select_motif,True if args.verbose else False)
+    unit_bc_data(args.samplename2bc,args.output_heatmap,args.model_fitting_results,args.isHit,args.file_of_select_motif,True if args.verbose else False)
