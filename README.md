@@ -144,6 +144,17 @@ python3 IgOmeProfiling_pipeline.py mock_data/exp12_10M_rows.fastq.gz mock_data/b
 The entire pipeline might run a few hours on mock data on 96 cores.  
 The output of the pipeline are heatmaps of most important motifs per biological condition va all samples.
 
+## Paired-end
+Running the paired-end on two fastq files.
+Install the package:
+```bash
+sudo apt-get install adapterremoval
+```
+Run the following:
+```bash
+AdapterRemoval --file1 FILE_NAME1.fastq --file2 FILE_NAME2.fastq --basename output_paired --collapse
+```
+
 ## Docker
 The code can be containerized using Docker:
 
@@ -177,8 +188,8 @@ Upload to AWS (using aws-cli with credentials set):
 In AWS machine (with aws-cli credentials set):
 ```bash
 $(aws ecr get-login --no-include-email --region us-west-2)
-docker pull 223455578796.dkr.ecr.us-west-2.amazonaws.com/igome-profile:latest
-docker run --name igome --rm -v ./test:/output 223455578796.dkr.ecr.us-west-2.amazonaws.com/igome-profile:latest ./mock_data/exp12_10M_rows.fastq.gz ./mock_data/barcode2samplename.txt ./mock_data/samplename2biologicalcondition.txt /output/analysis /output/logs
+docker pull 686447933053.dkr.ecr.us-west-2.amazonaws.com/igome-profile:latest
+docker run --name igome --rm -v ./test:/output 686447933053.dkr.ecr.us-west-2.amazonaws.com/igome-profile:latest ./mock_data/exp12_10M_rows.fastq.gz ./mock_data/barcode2samplename.txt ./mock_data/samplename2biologicalcondition.txt /output/analysis /output/logs
 ```
 
 ## Running on multiple machines
