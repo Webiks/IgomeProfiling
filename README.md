@@ -169,6 +169,14 @@ The mock data is included in the docker, to run it:
 docker run --name igome --rm -v ./test:/output webiks/igome-profile ./mock_data/exp12_10M_rows.fastq.gz ./mock_data/barcode2samplename.txt ./mock_data/samplename2biologicalcondition.txt /output/analysis /output/logs
 ```
 
+Option of stop aws machines in the end of the run:
+```bash
+# From project directory
+docker run --name igome --rm -v ./some_data:/data -v ./test:/output webiks/
+-v path_file_credentials:/root/.aws/credentials:ro
+igome-profile /data/exp12_10M_rows.fastq.gz /data/barcode2samplename.txt /data/samplename2biologicalcondition.txt /output/analysis /output/logs --stop_machines
+```
+
 Upload to AWS (using aws-cli with credentials set):
 ```bash
 ./aws_upload.sh

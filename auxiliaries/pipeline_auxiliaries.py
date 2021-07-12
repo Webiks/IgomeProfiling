@@ -9,7 +9,6 @@ import numpy as np
 import logging
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO)
-import sqlite3
 
 
 nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
