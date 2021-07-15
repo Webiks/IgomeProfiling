@@ -3,10 +3,13 @@ import sys
 from subprocess import call, run, Popen, PIPE
 from time import time, sleep
 import global_params
+import json
+import jsonschema
+import numpy as np
 import logging
-
 logger = logging.getLogger('main')
 logging.basicConfig(level=logging.INFO)
+import sqlite3
 
 
 nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
@@ -30,6 +33,122 @@ nnk_table: {str: str} = {"CGT": "R", "CGG": "R", "AGG": "R",
                          "TTT": "F",
                          "TGG": "W",
                          "TAT": "Y"}
+
+
+schema_sample2bc = {
+    "type": "object",
+    "propertyNames": {
+        "pattern": "^[A-Za-z0-9_]+$"
+    },
+    "patternProperties": {
+        "^[A-Za-z0-9_]+$" : { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9_]+$" } } 
+    }
+}
+
+
+schema_cross_exp = {
+    "type": "object",
+    "properties": {
+        "configuration": {
+            "description": "params that relevent for all runs",
+            "type": "object"
+        },
+        "runs": {
+            "description": "A specific run name and is params",
+            "type": "object",
+            "patternProperties": {
+                "^[A-Za-z0-9_+]+$": {
+                    "type": "object",
+                    "properties": {
+                        "configuration": {
+                            "type": "object",
+                            "properties": {
+                                "reads_path": { "type": "string" },
+                                "motifs_path": { "type": "string" },
+                                "model_path": { "type": "string" },
+                                "done_file_path": { "type": "string" },
+                                "logs_dir": { "type": "string" }
+                            },
+                            "required": [ "reads_path", "motifs_path", "model_path", "done_file_path", "logs_dir" ]
+                        },    
+                        "sample2bc": {"type": "object"},
+                        "biological_motifs_combine": {"type": "object"}
+                    },
+                    "required": [ "configuration", "sample2bc" ],
+                },    
+                   
+            },
+            "additionalProperties": False
+        },
+  },
+  "required": [ "configuration", "runs" ]
+}  
+
+
+schema_inference = {
+    "type": "object",
+    "properties": {
+        "configuration": {
+            "description": "params that relevent for all runs",
+            "type": "object"
+        },
+        "runs": {
+            "description": "A specific run name and is params",
+            "type": "object",
+            "patternProperties": {
+                "^[A-Za-z0-9_+]+$": {
+                    "properties": {
+                        "reads_path": {"type":"string"},
+				        "motifs_path": {"type":"string"},
+                        "sample2bc": {"type": "string"},
+				        "done_file_path": {"type":"string"},
+                        "logs_dir": { "type": "string" }
+                        },
+                        "required": ["reads_path", "motifs_path", "sample2bc", "done_file_path", "logs_dir" ],
+                    }
+            },
+            "additionalProperties": False   
+        }  
+  },
+  "required": [ "configuration", "runs" ]
+}
+
+
+schema_reads = {
+    "type": "object",
+    "properties": {
+        "configuration": {
+            "description": "params that relevent for all runs",
+            "type": "object"
+        },
+        "runs": {
+            "description": "A specific run name and is params",
+            "type": "object",
+            "patternProperties": {
+                "^[A-Za-z0-9_+]+$": {
+                    "required": [ "fastq", "barcode2sample", "done_file_path", "reads_path", "logs_dir" ],
+                    "properties": {
+                        "fastq": { "type": "string" },
+                        "barcode2sample": { "type": "string" },
+                        "done_file_path": { "type": "string" },
+                        "reads_path": { "type": "string" },
+                        "logs_dir": { "type": "string" }
+                    }
+                }
+            },
+            "additionalProperties": False   
+         }  
+  },
+  "required": ["configuration", "runs" ]
+}
+
+
+schema_to_phase = {
+    'reads_filtration': schema_reads,
+    'motif_inference': schema_inference,
+    'model_fitting': schema_cross_exp
+}
+
 
 def verify_file_is_not_empty(file_path):
     import logging
@@ -248,6 +367,7 @@ def run_step_locally(script_path, params_lists, tmp_dir, job_name, queue_name, v
         run(process, shell=True)
     return example_cmd
 
+
 def submit_pipeline_step(script_path, params_lists, tmp_dir, job_name, queue_name, verbose, new_line_delimiter='!@#',
                          q_submitter_script_path='/bioseq/bioSequence_scripts_and_constants/q_submitter_power.py',
                          required_modules_as_list=None, num_of_cpus=1, executable='python', done_path = None):
@@ -276,19 +396,40 @@ def fetch_cmd(script_name, parameters, verbose, error_path, done_path=None):
     #     fail(error_path, e)
 
 
-
-def load_table_to_dict(table_path, error_msg, delimiter ='\t'):
+def load_table_to_dict(table_path, error_msg, delimiter ='\t', is_validate_json = False):
     table = {}
-    with open(table_path) as f:
-        for line in f:
-            if line.isspace():  # empty line
-                continue
-            if line.startswith('#'):  # ignore symbol
-                continue
-            key, value = line.strip().split(delimiter)
-            if key in table:
-                assert False, error_msg.replace('{}', key)  # TODO: write to a global error log file
-            table[key] = value
+    filename, file_extension = os.path.splitext(table_path)
+    if file_extension == '.txt':
+        with open(table_path) as f:
+            for line in f:
+                if line.isspace():  # empty line
+                    continue
+                if line.startswith('#'):  # ignore symbol
+                    continue
+                key, value = line.strip().split(delimiter)
+                if key in table:
+                    message = error_msg.replace('{}', key)
+                    logger.error(message)
+                    assert False, message
+                table[key] = value
+    else:
+        try:
+            json_data = json.load(open(table_path))
+        except:
+            assert False, f'"{table_path}" is not a valid JSON file'
+        if is_validate_json:
+            is_valid_json = is_valid_json_structure(table_path, json_data, schema_sample2bc, logger)
+            if not is_valid_json:
+                message = 'Invalid JSON file structure, expected dictionary of key/value strings'
+                logger.error(message)
+                assert False, message
+        for key in json_data:
+            for val in json_data[key]:
+                if val in table:
+                    message = error_msg.replace('{}', val)
+                    logger.error(message)   
+                    assert False, message
+                table[val] = key
     return table
 
 
@@ -365,3 +506,74 @@ def count_memes(path):
     count = int(output) if p_status == 0 else 0
     print(f'Found {count} memes in {path}')
     return count
+
+    
+def is_valid_json_structure(json_path, json_data, schema, logger):
+    try:
+        jsonschema.validate(instance=json_data, schema=schema)
+    except jsonschema.exceptions.ValidationError as err:
+        logger.error(f'The structure of "{json_path}" file is not valid, reason: {err}')
+        return False
+    return True
+
+    
+def log_scale(df, rank_method):
+    # The options of ranking method are - hits, controlled_shuffles, pval, tfidf
+    if rank_method == 'hits':
+        df = np.log2(df + 1)
+    if rank_method == 'pval':    
+        df = 1-df
+    if rank_method == 'tfidf':
+        df = -np.log2(df + 0.0001)  # avoid 0  
+    return df
+
+
+def change_key_name(old_names_dict, map_name, reverse = False):
+    new_dict = {}
+    if old_names_dict:
+        keys = old_names_dict.keys()
+        for key in keys:
+            new_dict[map_name[key]] = old_names_dict[key]
+        return new_dict
+    return old_names_dict
+
+
+def process_params(args, config_path, map_name_parameters, func_run, phase, argv):
+    # create data structure for running filter_reads
+    done_file = args.done_file_path
+    base_map =  args.__dict__
+    keys = base_map.keys()
+    base_map = change_key_name(base_map, map_name_parameters)
+    if config_path:    
+        f = open(config_path)
+        multi_experiments_dict = json.load(f)
+        # validation of the json file
+        is_valid = is_valid_json_structure(config_path, multi_experiments_dict, schema_to_phase[phase], logger)
+        if not is_valid:
+            return 
+        configuration = multi_experiments_dict['configuration']
+        base_map.update(configuration)
+        runs = multi_experiments_dict['runs']
+        for run in runs:
+            dict_params = base_map.copy()
+            if phase == 'model_fitting':
+                dict_params.update(runs[run]['configuration'])
+            else:
+                dict_params.update(runs[run])
+            # create new list of argv of the specific run.
+            get_key = lambda k: k
+            get_value = lambda k: str(dict_params[map_name_parameters[k]])
+            has_value = lambda k: str(dict_params[map_name_parameters[k]]) if dict_params[map_name_parameters[k]] in ['','0','0.0'] else bool(dict_params[map_name_parameters[k]])
+            argv_new = [func(k) for k in keys if has_value(k)!=False for func in [get_key, get_value]]
+            argv_new.insert(0, argv[0])   
+            
+            dict_params['exp_name'] = run
+            dict_params['argv'] = argv_new
+            func_run(**dict_params)
+    
+        with open(done_file, 'w') as f:
+            f.write(' '.join(argv) + '\n')
+    else:
+        base_map['exp_name'] = ''
+        base_map['argv'] = argv
+        func_run(**base_map)

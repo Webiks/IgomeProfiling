@@ -84,7 +84,7 @@ def write_header(f_handler, txt):
 
 
 def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
-                 done_path, barcode2samplename_path,
+                 done_path, barcode2samplename_path, name_summary_file,
                  left_construct, right_construct, max_mismatches_allowed,
                  min_sequencing_quality, minimal_length_required, gz):
 
@@ -282,7 +282,7 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
 
     logger.info('Writing execution summary file...')
 
-    with open(f'{parsed_fastq_results}/summary_log.txt', 'w') as log_f:
+    with open(f'{parsed_fastq_results}/{name_summary_file}', 'w') as log_f:
         log_f.write(f'Starting {argv[0]}. Executed command is:\n{" ".join(argv)}\n')
         log_f.write(f'reads_filtration function is invoked with the following parameters:\n')
         log_f.write(f'fastq_path = {fastq_path}\n'
@@ -354,6 +354,7 @@ if __name__ == '__main__':
     parser.add_argument('logs_dir', type=str, help='logs folder')
     parser.add_argument('done_file_path', help='A path to a file that signals that the script finished running successfully.')
     parser.add_argument('barcode2samplename', type=str, help='A path to the barcode to sample name file')
+    parser.add_argument('--name_summary_file', default='summary_log.txt', type=str, help='A name for summary file of filter reads.')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('--left_construct', type=str, default="CAACGTGGC", help='left constant sequence')
     parser.add_argument('--right_construct', type=str, default="GCCT", help='right constant sequence')
@@ -379,12 +380,7 @@ if __name__ == '__main__':
 
     error_path = args.error_path if args.error_path else os.path.join(args.parsed_fastq_results, 'error.txt')
 
-    # try:
     filter_reads(sys.argv, args.fastq_path, args.parsed_fastq_results, args.logs_dir,
-                 args.done_file_path, args.barcode2samplename,
+                 args.done_file_path, args.barcode2samplename, args.name_summary_file,
                  args.left_construct, args.right_construct, args.max_mismatches_allowed,
-                 args.min_sequencing_quality, args.minimal_length_required,
-                 True if args.gz else False)
-    # except Exception as e:
-    #     fail(error_path, e)
-
+                 args.min_sequencing_quality, args.minimal_length_required, args.gz)

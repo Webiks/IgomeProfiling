@@ -57,6 +57,10 @@ public:
         return this->_hitCount;
     }
 
+    void factorHitCount(float factor) {
+        this->_hitCount *=factor;
+    }
+
     void addHitSequence(string& sequence, bool isStoreSequences = true, int count = 1) {
         this->_hitCount += count;
         if (isStoreSequences) {

@@ -10,12 +10,14 @@ computePSSM_cutoffs::computePSSM_cutoffs(vector<PSSM> & PSSM_array,
 	size_t TotalNumberOfRandoSeq,
 	alphabet& alph,
 	const string & CutofsPerPSSM_FileName,
-	int totalMemes) : 
+	int totalMemes,
+	double PercentOfRandomHitsPerPSSM) : 
 	_PSSM_array(PSSM_array), 
 	_totalNumberOfRandoSeq(TotalNumberOfRandoSeq), 
 	_alph(alph), 
 	_CutofsPerPSSM_FileName(CutofsPerPSSM_FileName),
-	_totalMemes(totalMemes)
+	_totalMemes(totalMemes),
+	_PercentOfRandomHitsPerPSSM(PercentOfRandomHitsPerPSSM)
 {
 	generateRandomPeptides();
 	computecCutoffsBasedOnRandomPeptides();
@@ -79,8 +81,7 @@ void computePSSM_cutoffs::computecCutoffsBasedOnRandomPeptides() {
 	// determin cutoff for each seq type and print to file
 	ofstream PSSM_Scores_Cutoff;
 	PSSM_Scores_Cutoff.open(_CutofsPerPSSM_FileName);
-
-	double PercentOfAcceptedPeptidesPerType = PercentOfRandomHitsPerPSSM / _totalMemes; // for each seq type the cutoff will be the percent of hits accepted for all PSSMs devided by the number of PSSMs
+	double PercentOfAcceptedPeptidesPerType = _PercentOfRandomHitsPerPSSM / _totalMemes; // for each seq type the cutoff will be the percent of hits accepted for all PSSMs devided by the number of PSSMs
 	for (size_t i = 0; i<_PSSM_array.size(); ++i)
 	{
 		PSSM_Scores_Cutoff << "###\t" << _PSSM_array[i].PSSM_name << "\t";
