@@ -27,7 +27,6 @@ def calculate_pssm_thresholds(meme_path, cutoffs_path, faa_path, number_of_rando
             if rpm_factor:
                 cmd += ' -useFactor'
             logger.info(f'{datetime.datetime.now()}: starting CalcPSSM_Pval. Executed command is:\n{cmd}')
-
         elif rank_method == 'tfidf':
             cmd = f'./hits_cpp/hits -m {meme_path} -c {cutoffs_path} -s {faa_path} -o {output_path} --outputSequences'
             logger.info(f'{datetime.datetime.now()}: starting TF-IDF\' hits. Executed command is:\n{cmd}')

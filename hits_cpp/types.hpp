@@ -20,3 +20,4 @@ typedef vector<ShufflePattern> ShufflePatterns;
 typedef map<int, ShufflePatterns> ShufflesMap;
 typedef map<string, vector<Meme>> MemeShufflesMap;
 typedef map<string, float> MemeRatingMap;
+typedef map<string, int> SequencesRpmMap;

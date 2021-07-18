@@ -59,5 +59,6 @@ SEQ::SEQ(string & SeqString, const string & SeqName, const double CopyNumber, al
 		_Seq.push_back(alph._alphabetMap[i]);
 	}
 	setSeq_Type();
-	setCopyNmber();
+	//setCopyNmber();
+	
 };

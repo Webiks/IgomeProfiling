@@ -188,7 +188,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                         error_file_path=error_path, suffix='_done_scan.txt')
     else:
         logger.info(f'Skipping scanning peptides vs motifs (hits and values), all scans found')
-    
+     
     get_sample_for_label = False
     if multi_experiments_dict and "biological_motifs_combine" in multi_experiments_dict['runs'][exp_name]:
         biological_conditions = multi_experiments_dict['runs'][exp_name]['biological_motifs_combine'].keys()
@@ -305,7 +305,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
 
 def get_faa_file_name_from_path(path, use_mapitope):
     for file_name in os.listdir(path):
-        if file_name.endswith('faa') and 'unique' not in file_name and ('mapitope' in file_name) == use_mapitope:
+        if file_name.endswith('faa') and 'unique' in file_name and ('mapitope' in file_name) == use_mapitope:
             file_name = file_name
             break
     return os.path.join(path, file_name)
