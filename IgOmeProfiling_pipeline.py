@@ -80,7 +80,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                  rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                  num_of_random_configurations_to_sample, cv_num_of_splits, seed_random_forest, random_forest_seed_configurations,
                  stop_machines_flag, type_machines_to_stop, name_machines_to_stop, cross_experiments_config, no_rpm_factor,
-                 run_summary_path, error_path, queue, verbose, argv):
+                 is_output_sequences_scanning, run_summary_path, error_path, queue, verbose, argv):
 
     files_are_valid = True
     if multi_exp_config_reads or multi_exp_config_inference or cross_experiments_config:
@@ -172,6 +172,7 @@ def run_pipeline(fastq_path, barcode2samplename_path, samplename2biologicalcondi
                              f'--random_forest_seed_configurations {random_forest_seed_configurations}', f'--rank_method {rank_method}', 
                              '--is_run_random_forest_per_bc_sequentially' if is_run_random_forest_per_bc_sequentially else '',
                              '' if no_rpm_factor else '--no_rpm_factor',
+                             f'--is_output_sequences_scanning' if is_output_sequences_scanning else '',
                              f'--error_path {error_path}', '-v' if verbose else '', f'-q {queue}','-m' if use_mapitope else '']        
         if rank_method == 'tfidf':
             if tfidf_method:
@@ -288,6 +289,7 @@ if __name__ == '__main__':
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--is_run_random_forest_per_bc_sequentially', action='store_true', help='Set the flag to true when number of cores is less than number of BC X 2 (hit and value), otherwise it will run all the BC  parallel (on the same time)')
     parser.add_argument('--no_rpm_factor', action='store_false', help='Disable multiplication hits by factor rpm for normalization')
+    parser.add_argument('--is_output_sequences_scanning', action='store_true', help='If to store the output sequences that had hits')
 
     # general optional parameters
     parser.add_argument('--run_summary_path', type=str,
@@ -323,4 +325,4 @@ if __name__ == '__main__':
                  args.rank_method, args.tfidf_method, args.tfidf_factor, args.shuffles, args.shuffles_percent, args.shuffles_digits,
                  args.num_of_random_configurations_to_sample, args.cv_num_of_splits, args.seed_random_forest, args.random_forest_seed_configurations,
                  args.stop_machines, args.type_machines_to_stop, args.name_machines_to_stop, args.cross_experiments_config, args.no_rpm_factor,
-                 run_summary_path, error_path, args.queue, args.verbose, sys.argv)
+                 args.is_output_sequences_scanning, run_summary_path, error_path, args.queue, args.verbose, sys.argv)

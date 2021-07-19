@@ -44,6 +44,7 @@ map_names_command_line = {
     "type_machines_to_stop" : "type_machines_to_stop",
     "name_machines_to_stop" : "name_machines_to_stop",
     "no_rpm_factor": "no_rpm_factor",
+    "is_output_sequences_scanning": "is_output_sequences_scanning",
     "queue" : "queue",
     "verbose" : "verbose",
     "error_path" : "error_path",
@@ -88,7 +89,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                      is_run_random_forest_per_bc_sequentially, num_of_random_configurations_to_sample, number_parallel_rf,
                      min_value_error_rf, rank_method, tfidf_method, tfidf_factor, shuffles, shuffles_percent, shuffles_digits,
                      cv_num_of_splits, rf_seed, rf_seed_configurations, no_rpm_factor,
-                     stop_machines_flag, type_machines_to_stop, name_machines_to_stop,
+                     stop_machines_flag, type_machines_to_stop, name_machines_to_stop, is_output_sequences_scanning,
                      queue, verbose, error_path, mapitope, exp_name, argv):     
 
     if exp_name:
@@ -134,6 +135,8 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
         os.makedirs(bc_dir_path, exist_ok=True)
         scanning_dir_path = os.path.join(bc_dir_path, 'scanning')
         os.makedirs(scanning_dir_path, exist_ok=True)
+        scanning_dir_path = os.path.join(bc_dir_path, 'sequences_hits_scanning')
+        os.makedirs(scanning_dir_path, exist_ok=True)
     
     # compute scanning scores (hits and values)
     logger.info('_'*100)
@@ -163,6 +166,10 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                     if rank_method == 'shuffles':
                         cmd += ['--shuffles', shuffles]
                         cmd += ['--shuffles_percent', shuffles_percent, '--shuffles_digits', shuffles_digits]
+                    if is_output_sequences_scanning:
+                        sequnces_hits_path =  os.path.join(model_path, bc, 'sequences_hits_scanning',
+                                           f'{sample_name}_peptides_vs_{bc}_motifs_{os.path.splitext(file_name)[0]}.txt')
+                        cmd += ['--is_output_sequences_scanning', '--sequence_hit_motif_path', sequnces_hits_path]
                     all_cmds_params.append(cmd)
                 else:
                     logger.debug(f'skipping scan as {done_path} found')
@@ -188,7 +195,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
                         error_file_path=error_path, suffix='_done_scan.txt')
     else:
         logger.info(f'Skipping scanning peptides vs motifs (hits and values), all scans found')
-    
+     
     get_sample_for_label = False
     if multi_experiments_dict and "biological_motifs_combine" in multi_experiments_dict['runs'][exp_name]:
         biological_conditions = multi_experiments_dict['runs'][exp_name]['biological_motifs_combine'].keys()
@@ -305,7 +312,7 @@ def build_classifier(reads_path, motifs_path, model_path, logs_dir, sample2bc, n
 
 def get_faa_file_name_from_path(path, use_mapitope):
     for file_name in os.listdir(path):
-        if file_name.endswith('faa') and 'unique' not in file_name and ('mapitope' in file_name) == use_mapitope:
+        if file_name.endswith('faa') and 'unique' in file_name and ('mapitope' in file_name) == use_mapitope:
             file_name = file_name
             break
     return os.path.join(path, file_name)
@@ -345,6 +352,7 @@ if __name__ == '__main__':
     parser.add_argument('--type_machines_to_stop', default='', type=str, help='Type of machines to stop, separated by comma. Empty value means all machines. Example: t2.2xlarge,m5a.24xlarge')
     parser.add_argument('--name_machines_to_stop', default='', type=str, help='Names (patterns) of machines to stop, separated by comma. Empty value means all machines. Example: worker*')
     parser.add_argument('--no_rpm_factor', action='store_false', help='Disable multiplication hits by factor rpm for normalization')
+    parser.add_argument('--is_output_sequences_scanning', action='store_true', help='If to store the output sequences that had hits')
     parser.add_argument('--error_path', type=str, help='a file in which errors will be written to')
     parser.add_argument('-q', '--queue', default='pupkoweb', type=str, help='A queue to which the jobs will be submitted')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')

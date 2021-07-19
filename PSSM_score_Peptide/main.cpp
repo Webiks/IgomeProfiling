@@ -21,7 +21,7 @@ using namespace std;
 string PadSeq (string seq, size_t PaddingLength);
 void fromFileToVectorOfString(const string fileName,vector<string> & allLines);
 void readFileToPSSM_array(const string fileName, vector <PSSM> & PSSM_array, map<string,int> & PSSM_Name_To_ArrayIndex);
-void readFileToSeq_array (const string fileName, alphabet& alph, vector <SEQ> &Seq_array);
+void readFileToSeq_array (const string fileName, alphabet& alph, vector <SEQ> &Seq_array, bool useCountDuplicate);
 void get_top_hits (const vector<SEQ> & sorted_seq,double fraction, vector <SEQ> & top_hits);
 void fill_Seq_Hits_PSSM_map(const vector<SEQ> & seq_Hits_vector,map<string,vector<string>> &PSSM_Hits, string PSSM_name);
 vector<SEQ> get_sort_seq_vector_by_scores (vector<SEQ> & seq_vector, vector <double> & scores_vector);
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 // The first is -pssm <name_of_pssm_in_Mast_format>. 
 // The second is- pssm_cutoffs <filename_for PSSM_cutoffs>
 size_t get_running_mode(int argc, char *argv[]){
-	int max_required_params = 6;
+	int max_required_params = 8;
 	int min_required_params = 2;
 	if ((argc > (max_required_params * 2) + 2) || (argc < (min_required_params * 2) + 2)) {// each with its flag and mode flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
 		cout << "Usage is in one of few modes: <<endl";
@@ -163,10 +163,16 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 	cout<<endl;
 }
 
-void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string & CutofsPerPSSM_FileName, string & Seq_FASTA_FileName, string & Hits_Out_FileName, size_t & numberOfRandomPSSM, bool &useFactor) {
+void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string & CutofsPerPSSM_FileName, string & Seq_FASTA_FileName, string & Hits_Out_FileName,
+ 						  size_t & numberOfRandomPSSM, bool &useFactor, bool & isOutputSequences, string & sequenceHitMotifPath) {
 	// parse ARGV arguments
-	size_t num_required_params = 6;
-	if ((argc != (num_required_params * 2)+ 1) & (argc != (num_required_params * 2))) {// each with its flag and mode_flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
+	size_t num_required_params = 8;
+	//The first 5 params only - > 12 argc ,
+	//The first 5 params with useFactor - > 13 argc
+	//The first 5 params with isOutputSequences and sequenceHitMotifPath -> 15 argc
+	//All params together -> 16 
+	// each with its flag and mode_flag, check the value of argc. If not enough parameters have been passed, inform user and exit.
+	if ((argc != (num_required_params + 4)) & (argc != (num_required_params + 5)) & (argc != (num_required_params * 2)-1) & (argc != (num_required_params * 2))) {
 		cout << "Usage is -pssm <PSSMs_in_MAST_Format> -pssm_cutoffs <filename_for PSSM_cutoffs> -seq <input_seq_FASTA> -out <out>\n"; // Inform the user of how to use the program
 		exit(12);
 	}
@@ -182,7 +188,8 @@ void getFileNamesFromArgv(int argc, char *argv[], string & PSSM_FileName, string
 		else if (string(argv[i]) == "-out") Hits_Out_FileName = string(argv[i + 1]);
 		else if (string(argv[i]) == "-NrandPSSM") numberOfRandomPSSM = size_t(atoi(argv[i + 1]));
 		else if (string (argv[i]) == "-useFactor") useFactor = true;
-		
+		else if (string (argv[i]) == "-outputSequences") isOutputSequences=true;
+		else if (string (argv[i]) == "-sequenceHitMotifPath") sequenceHitMotifPath = string(argv[i + 1]);
 		cout<<argv[i]<<" ";
 	}
 	if (numberOfRandomPSSM == 0) {
@@ -226,7 +233,7 @@ int associatePeptidesWithPSSM(int argc, char *argv[])
 
 
 	vector<SEQ> Seq_array;
-	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array);
+	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, false);
 
 	ofstream HitsReport_OutFileHandle;
 	HitsReport_OutFileHandle.open(Hits_Out_FileName);
@@ -335,8 +342,6 @@ void PSSM_scoresFromSeqVector(const PSSM& PSSM1, const vector<vector<size_t> > &
 	}
 }
 
-
-
 vector<size_t> PadSeq(const vector<size_t>& seq, size_t PaddingLength)
 {
 		vector<size_t> tempSeqPadded(PaddingLength,GAP);
@@ -348,11 +353,12 @@ vector<size_t> PadSeq(const vector<size_t>& seq, size_t PaddingLength)
 		return tempSeqPadded;
 }
 
-void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Seq_array) {
+void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Seq_array, bool useCountDuplicate) {
 	vector<string> allLines;
 	size_t total_seq=0;
 	fromFileToVectorOfString(fileName,allLines);
 	for (size_t i=0; i<allLines.size(); ++i) {
+		double count = 1;
 		string currLine = allLines[i];
 		string FirstChar=currLine.substr(0,1);
 //		FirstChar=">";
@@ -361,7 +367,10 @@ void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Se
 		{
 			string Seq;
 			string name = currLine.substr(1);
-			
+			if (useCountDuplicate) {
+				auto lastIndex = currLine.find_last_of('_');
+            	count = stod(currLine.substr(lastIndex + 1));
+			}
 			++i;
 			currLine = allLines[i];
 			while (currLine.substr(0,1).compare(">")!=0)
@@ -377,7 +386,7 @@ void readFileToSeq_array (const string fileName, alphabet& alph, vector<SEQ> &Se
 					break;
 				}
 			}
-			SEQ currSeq(Seq, name, 1, alph);
+			SEQ currSeq(Seq, name, count, alph);
 			total_seq++;
 			Seq_array.push_back(currSeq);
 			i--; // got to new seq
@@ -453,11 +462,26 @@ void get_top_hits(const vector<SEQ> & sorted_seq, double fraction, vector <SEQ> 
 	}
 }
 
-double numberOfTotalHitsPerPSSM(const PSSM& pssm1, const vector<SEQ> & Seq_array, const size_t verbose=0) {
+void writeSequenceHits(const PSSM& pssm1, const vector <HIT> & hits, const string sequenceHitsPath){
+	ofstream fileSequenceHit;
+	fileSequenceHit.open(sequenceHitsPath);
+	fileSequenceHit << "MOTIF " << pssm1.PSSM_name << endl;
+	cout<<hits[1]._seq.getStringOfSeq() <<endl;
+    for (size_t k = 0; k < hits.size(); ++k) {
+        fileSequenceHit << hits[k]._seq.getStringOfSeq() << " " << hits[k]._seq._CopyNumber << endl;
+    }
+	fileSequenceHit.close();
+}
+
+
+double numberOfTotalHitsPerPSSM(const PSSM& pssm1, const vector<SEQ> & Seq_array, const string sequenceHitsPath, const bool isOutputSequences, const size_t verbose=0) {
 	vector <HIT> hits;
 	Find_PSSM_Hits(pssm1, Seq_array, hits, verbose); //2 compute how many peptides are significant for this shuffled pssm
 	double sum = 0;
-	
+	//print the sequence that had hit with the motif 
+	if (isOutputSequences){
+		writeSequenceHits(pssm1, hits, sequenceHitsPath);
+	}
 	for (size_t k = 0; k < hits.size(); ++k) {
 		sum += hits[k]._seq._CopyNumber;
 	}
@@ -479,26 +503,28 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 	string Hits_Out_FileName = "";
 	size_t numberOfRandomPSSM = 0;
 	bool useFactor = false;
-	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, Seq_FASTA_FileName, Hits_Out_FileName, numberOfRandomPSSM, useFactor);
+	bool isOutputSequences = false;
+	string sequenceHitMotifPath = "";
+	getFileNamesFromArgv(argc, argv, PSSM_FileName, CutofsPerPSSM_FileName, Seq_FASTA_FileName, Hits_Out_FileName, numberOfRandomPSSM,
+						 useFactor, isOutputSequences, sequenceHitMotifPath);
 	cout<<"Number of random PSSMs to calculate Pval: "<< numberOfRandomPSSM <<endl;
 	readPSSM_info_from_file rpif(PSSM_FileName);
 	rpif.update_PSSM_cutoff_from_file(CutofsPerPSSM_FileName);
 
-
 	vector<SEQ> Seq_array;
-	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array);
+	readFileToSeq_array(Seq_FASTA_FileName, rpif._alph, Seq_array, true);
 
 	ofstream listOfPvaluesFile;
 	listOfPvaluesFile.open(Hits_Out_FileName);
 	listOfPvaluesFile << "## PSSM_name\tp_Value\tTrue_Hits: num_of_hits" <<endl;
 	for (size_t i = 0; i < rpif._PSSM_array.size(); ++i) {
 	//for (size_t i = 0; i < 1; ++i) {
-		double numberOfHitsInRealPSSM = numberOfTotalHitsPerPSSM(rpif._PSSM_array[i], Seq_array, 1);
+		double numberOfHitsInRealPSSM = numberOfTotalHitsPerPSSM(rpif._PSSM_array[i], Seq_array, sequenceHitMotifPath, isOutputSequences, 1);
 		vector<double> numSigPeptides;
 		default_random_engine gen(483); // TODO seed should be fro input
 		for (size_t j = 0; j < numberOfRandomPSSM; ++j) {
 			PSSM randomPSSM = rpif._PSSM_array[i].randomize(gen); //1 generate a random PPSM.
-			double sum = numberOfTotalHitsPerPSSM(randomPSSM, Seq_array,0);
+			double sum = numberOfTotalHitsPerPSSM(randomPSSM, Seq_array, sequenceHitMotifPath, false, 0);
 			numSigPeptides.push_back(sum);// store the number
 		}
 		sort(numSigPeptides.begin(), numSigPeptides.end());
@@ -515,10 +541,16 @@ int assignPvalueToPSSMaRRAY(int argc, char *argv[])
 		if (place == -1) place = 0; //so that we get p value = 1 in this case.
 		//cout << "place = " << place << endl;
 		double p_Value = (numberOfRandomPSSM - place +0.0) / numberOfRandomPSSM;
-		if (useFactor & Seq_array.size() > 0) {
-			float factor = 1000000 / Seq_array.size();
+		
+		if (useFactor) {
+			int numberOfSeq = 0;
+			for (size_t k = 0; k < Seq_array.size(); ++k) {
+				numberOfSeq += Seq_array[k]._CopyNumber;
+			}
+			float factor = float(1000000) / float(numberOfSeq);
 			numberOfHitsInRealPSSM *= factor;
 		}
+
 		listOfPvaluesFile << rpif._PSSM_array[i].PSSM_name << "\t" << p_Value << "\tTrue_Hits: " << numberOfHitsInRealPSSM <<endl; // << " total true hits " << numberOfHitsInRealPSSM << endl;
 		cout << "finished with PSSM " << i << endl;
 	}
