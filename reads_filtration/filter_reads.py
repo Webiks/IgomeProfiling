@@ -281,7 +281,7 @@ def filter_reads(argv, fastq_path, parsed_fastq_results, logs_dir,
                     f"More than {max_mismatches_allowed} mistakes in the flanking constant sequences -> {barcode2statistics[barcode]['too_many_mistakes']}\n"
                     f"Nonsense stop codon -> {barcode2statistics[barcode]['stop_codon']}\n"           
                     f"Too short NNK sequences -> {barcode2statistics[barcode]['too_short']}\n"
-                    f"Too long NNK sequrnces -> {barcode2statistics[barcode]['too_long']}\n")
+                    f"Too long NNK sequences -> {barcode2statistics[barcode]['too_long']}\n")
 
             write_header(f, f"\n\nTOTAL NUMBER OF TRANSLATED SEQUENCES -> {barcode2statistics[barcode]['total_translated_sequences']}\n\n")
 
